@@ -1,0 +1,47 @@
+name: Throttle Backend CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Code Syntax & Compilation Check
+        run: |
+          python -m py_compile app/main.py
+
+      - name: Run Test Suite
+        env:
+          ENVIRONMENT: testing
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          SECRET_KEY: ci-test-secret-key-minimum-64-characters-long-test-environment-xxxx
+          META_APP_ID: placeholder_meta_app_id
+          META_APP_SECRET: placeholder_meta_app_secret
+        run: |
+          pytest -v
+
+      - name: Verify FastAPI App Initialization
+        env:
+          ENVIRONMENT: testing
+          SECRET_KEY: ci-test-secret-key-minimum-64-characters-long-test-environment-xxxx
+        run: |
+          python -c "from app.main import app; print('Throttle FastAPI application initialized successfully:', app.title)"
